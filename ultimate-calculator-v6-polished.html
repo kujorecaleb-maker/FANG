@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ultimate Calculator</title>
+<style>
+:root{
+ --bg:#1f100d;--panel:#321b16;--panel2:#48271d;--panel3:#5a3023;
+ --orange:#ff873b;--orange2:#ffb477;--text:#fff1e5;--muted:#cdb7aa;
+ --line:#674337;--danger:#ff9d72;
+}
+*{box-sizing:border-box}html{background:var(--bg)}
+body{margin:0;min-height:100vh;background:linear-gradient(180deg,#24120f,#1b0d0b);
+ color:var(--text);font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+button,input{font:inherit}button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+.app{width:min(760px,100%);margin:auto;padding:14px 13px 32px}
+header{display:flex;align-items:center;justify-content:space-between;padding:3px 3px 12px}
+.brand{font-size:23px;font-weight:850;letter-spacing:-.4px}
+.mode{display:flex;gap:6px}.mode button{border:1px solid var(--line);background:var(--panel2);
+ color:var(--muted);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:800}
+.mode button.active{color:var(--orange2);border-color:var(--orange);background:#3b2119}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;
+ padding:14px;margin-bottom:12px;box-shadow:0 10px 28px rgba(0,0,0,.22)}
+.display{padding:17px 17px 15px;border-color:#78462f}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}
+#expr{display:block;width:100%;min-height:58px;background:transparent;border:0;
+ outline:0;color:var(--text);font-size:32px;font-weight:700;padding:2px 0;caret-color:var(--orange)}
+#expr::placeholder{color:#9f887c;font-weight:500}
+.reaction{min-height:21px;margin-top:9px;color:var(--orange2);font-size:13px;font-weight:650}
+.answer{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.answer-left{min-width:0}.answer .value{font-size:34px;font-weight:900;line-height:1.15;overflow:auto;white-space:nowrap}
+.copy{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:12px;padding:9px 12px;font-weight:800}
+.copy:active{transform:scale(.97)}
+.groups{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:11px}
+.tab{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:12px;
+ padding:10px 7px;font-size:13px;font-weight:800;min-height:44px}
+.tab.active{background:#3c2119;border-color:var(--orange);color:var(--orange2)}
+.section{display:none}.section.active{display:block}
+.keys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.keys button,.tools button{min-height:54px;border:1px solid var(--line);border-radius:15px;
+ background:var(--panel2);color:var(--text);font-size:17px;font-weight:800}
+.keys button:active,.tools button:active,.tab:active{transform:scale(.97)}
+.keys .op{color:var(--orange2);background:#3d2119;border-color:#7b4930;font-size:20px}
+.keys .equal{background:var(--orange);color:#24120f;border-color:var(--orange);font-size:20px}
+.keys .danger{color:var(--danger)}
+.tools{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tools button{font-size:15px}
+.subtle{color:var(--muted);font-size:12px}
+.history-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.clear-history{border:0;background:transparent;color:var(--orange2);font-size:12px;font-weight:800}
+.history{display:flex;flex-direction:column;gap:8px}
+.hist{background:#281510;border:1px solid var(--line);border-radius:14px;padding:11px}
+.hist-q{font-weight:750;overflow:auto;white-space:nowrap}
+.hist-a{font-size:19px;font-weight:850;color:var(--orange2);margin-top:4px}
+.hist-meta{font-size:10px;color:#8f776c;margin-top:4px}
+.hist-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:9px}
+.hist-actions button{border:1px solid var(--line);background:var(--panel2);color:var(--text);
+ border-radius:9px;padding:7px;font-size:11px;font-weight:750}
+@media(max-width:430px){
+ .app{padding:11px 9px 25px}.brand{font-size:21px}#expr{font-size:27px}
+ .keys{gap:7px}.keys button{min-height:50px}.groups{gap:7px}
+ .groups .tab{font-size:12px}.answer .value{font-size:30px}
+}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand">Ultimate Calculator</div>
+  <div class="mode">
+    <button id="degBtn" class="active">DEG</button>
+    <button id="radBtn">RAD</button>
+  </div>
+</header>
+
+<section class="card display">
+  <input id="expr" autocomplete="off" autocorrect="off" autocapitalize="off"
+         spellcheck="false" placeholder="0" aria-label="Expression">
+  <div class="reaction" id="reaction" aria-live="polite"></div>
+</section>
+
+<section class="card answer">
+  <div class="answer-left">
+    <div class="label">Answer</div>
+    <div class="value" id="answer">—</div>
+  </div>
+  <button class="copy" id="copyAnswer">Copy</button>
+</section>
+
+<section class="card">
+  <div class="groups">
+    <button class="tab active" data-group="basic">Basic</button>
+    <button class="tab" data-group="scientific">Scientific</button>
+    <button class="tab" data-group="functions">Functions</button>
+    <button class="tab" data-group="structures">Structures</button>
+    <button class="tab" data-group="symbols">Symbols</button>
+    <button class="tab" data-group="edit">Edit</button>
+  </div>
+
+  <div class="section active" id="basic">
+    <div class="keys">
+      <button class="danger" data-key="AC">AC</button>
+      <button data-key="⌫">⌫</button>
+      <button class="op" data-key="%">%</button>
+      <button class="op" data-key="÷">÷</button>
+
+      <button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button><button class="op" data-key="×">×</button>
+      <button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button><button class="op" data-key="−">−</button>
+      <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button><button class="op" data-key="+">+</button>
+
+      <button data-key="0">0</button><button data-key=".">.</button><button data-key="(">(</button><button data-key=")">)</button>
+      <button data-key="00">00</button><button data-key="π">π</button><button data-key="e">e</button><button class="equal" data-key="=">=</button>
+    </div>
+  </div>
+
+  <div class="section" id="scientific">
+    <div class="keys">
+      <button data-key="sin(">sin</button><button data-key="cos(">cos</button><button data-key="tan(">tan</button><button data-key="sqrt(">√</button>
+      <button data-key="asin(">sin⁻¹</button><button data-key="acos(">cos⁻¹</button><button data-key="atan(">tan⁻¹</button><button data-key="log(">log</button>
+      <button data-key="ln(">ln</button><button data-key="^">xʸ</button><button data-key="!">n!</button><button data-key="abs(">abs</button>
+      <button data-key="cbrt(">∛</button><button data-key="exp(">exp</button><button data-key="10^">10ˣ</button><button data-key="cot(">cot</button>
+    </div>
+  </div>
+
+  <div class="section" id="functions">
+    <div class="keys">
+      <button data-key="sin(">sin</button><button data-key="cos(">cos</button><button data-key="tan(">tan</button><button data-key="cot(">cot</button>
+      <button data-key="sqrt(">√</button><button data-key="cbrt(">∛</button><button data-key="log(">log</button><button data-key="ln(">ln</button>
+      <button data-key="floor(">floor</button><button data-key="ceil(">ceil</button><button data-key="round(">round</button><button data-key="abs(">abs</button>
+    </div>
+  </div>
+
+  <div class="section" id="structures">
+    <div class="keys">
+      <button data-key="(">( )</button><button data-key="sqrt(">√x</button><button data-key="^">xʸ</button><button data-key="1/(">a/b</button>
+      <button data-key="|">|x|</button><button data-key="1 1/2">mixed</button><button data-key="^">xⁿ</button><button data-key="°">°</button>
+    </div>
+  </div>
+
+  <div class="section" id="symbols">
+    <div class="keys">
+      <button data-key="π">π</button><button data-key="e">e</button><button data-key="α">α</button><button data-key="β">β</button>
+      <button data-key="θ">θ</button><button data-key="Δ">Δ</button><button data-key="x">x</button><button data-key="y">y</button>
+      <button data-key="z">z</button><button data-key="i">i</button><button data-key="∞">∞</button><button data-key="°">°</button>
+    </div>
+  </div>
+
+  <div class="section" id="edit">
+    <div class="tools">
+      <button data-key="←">←</button><button data-key="→">→</button>
+      <button id="undo">Undo</button><button id="redo">Redo</button>
+      <button data-key="⌫">⌫</button><button data-key="AC">Clear</button>
+      <button id="selectAll">Select all</button><button id="paste">Paste</button>
+      <button id="copyExpr">Copy</button>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="history-head">
+    <div class="label">History</div>
+    <button class="clear-history" id="clearHistory">Clear history</button>
+  </div>
+  <div class="history" id="history"></div>
+</section>
+</div>
+
+<script>
+'use strict';
+
+const expr=document.getElementById('expr');
+const answer=document.getElementById('answer');
+const reaction=document.getElementById('reaction');
+const historyEl=document.getElementById('history');
+
+let angleMode='DEG';
+let history=JSON.parse(localStorage.getItem('ultimateCalculatorHistory')||'[]');
+let undoStack=[],redoStack=[];
+let lastSubmittedExpression=null;
+const lastReaction={};
+const lastSimpleRoast={};
+
+const reactionPools={
+ extremelyEasy:[
+  'Bro… you really needed me for this? 😭','That one was basically a warm-up.',
+  'I barely had to think about that one.','Okayyy, starting with the easy stuff.',
+  'That was quick. Too quick. 😭','We are definitely warming up.',
+  'My calculator brain is still loading. 😂','That one did not stand a chance.'
+ ],
+ easy:[
+  "Okay, we're warming up.",'Nice and simple. I got you.','Alright, this one is under control.',
+  'Easy start. Let’s keep going.','That looks friendly enough.','No panic needed for this one.',
+  'A clean little calculation.','Yep, I know where this is going.'
+ ],
+ moderate:[
+  'Alright, let me actually think about this.','Okay, now we are doing some real calculating.',
+  'This one needs a little more attention.','Alright, let’s work through it carefully.',
+  'I need to slow down for this one.','Okay, this is getting interesting.',
+  'Let me line everything up first.','Not bad. This one actually makes me work.'
+ ],
+ hard:[
+  'Oh, this one is interesting. Give me a second.','Okay, this one deserves some focus.',
+  'Now we are getting serious.','Let me break this one down carefully.',
+  'This is definitely not a 2 + 2. 😭','Alright, I am going step by step on this.',
+  'Okay… I need to concentrate here.','This one has a few things going on.'
+ ],
+ veryHard:[
+  'WAIT 💀 Let me break this down.','Okay, this one came to fight.',
+  'Yeah… I am taking my time with this one.','This is where things get interesting.',
+  'Alright, deep breath. Let’s calculate.','That expression is doing a LOT. 😭',
+  'Okay, no rushing this one.','Now THIS is a proper calculation.'
+ ],
+ extreme:[
+  'Okay, this is serious calculator territory.','Yeah… this one needs the full brain.',
+  'I am going to take this one apart carefully.','That expression is absolutely packed. 💀',
+  'Okay, we have entered boss-level math.','No shortcuts here. Let’s work it out.',
+  'This is one of those “check it twice” problems.','Alright. Full concentration mode.'
+ ]
+};
+
+function chooseReaction(level){
+  const pool=reactionPools[level]||reactionPools.moderate;
+  let item=pool[Math.floor(Math.random()*pool.length)];
+  while(pool.length>1 && item===lastReaction[level]){
+    item=pool[Math.floor(Math.random()*pool.length)];
+  }
+  lastReaction[level]=item;
+  return item;
+}
+
+const simpleRoasts=[
+  'Bro… 2 + 2? You already know this one. 😭',
+  'You opened a whole calculator for THAT? 💀',
+  'I respect the test, but you absolutely know this answer. 😂',
+  'This calculator is feeling personally challenged right now. 😭',
+  'Come on bro, give me something that makes me work. 💀',
+  'You really said “let me test the calculator” with 2 + 2. 😂',
+  'That is not a calculation. That is a warm-up. 😭',
+  'I can calculate it… but you already knew it. 💀'
+];
+
+function chooseSimpleRoast(){
+  let item=simpleRoasts[Math.floor(Math.random()*simpleRoasts.length)];
+  while(simpleRoasts.length>1 && item===lastSimpleRoast.value){
+    item=simpleRoasts[Math.floor(Math.random()*simpleRoasts.length)];
+  }
+  lastSimpleRoast.value=item;
+  return item;
+}
+
+function getDifficulty(s){
+  const compact=s.replace(/\s/g,'');
+  const operators=(compact.match(/[+−×÷*/^]/g)||[]).length;
+  const functions=(compact.match(/sin|cos|tan|asin|acos|atan|sqrt|cbrt|log|ln|abs|floor|ceil|round|cot/gi)||[]).length;
+  const nesting=(compact.match(/[()]/g)||[]).length;
+  const len=compact.length;
+
+  if(len<=4 && operators<=1 && /^[0-9+−×÷*/().]+$/.test(compact)) return 'extremelyEasy';
+  if(len<=10 && functions===0 && operators<=2) return 'easy';
+  if(len<=22 && functions<=1 && operators<=4 && nesting<=4) return 'moderate';
+  if(len<=40 && functions<=3 && operators<=7) return 'hard';
+  if(len<=70 && functions<=5) return 'veryHard';
+  return 'extreme';
+}
+
+function expressionChanged(){
+  lastSubmittedExpression=null;
+  answer.textContent='—';
+  reaction.textContent='';
+}
+
+function pushUndo(){
+  undoStack.push(expr.value);
+  if(undoStack.length>50) undoStack.shift();
+  redoStack=[];
+}
+
+function insertKey(key){
+  if(key==='←'){moveCursor(-1);return}
+  if(key==='→'){moveCursor(1);return}
+  if(key==='AC'){pushUndo();expr.value='';expressionChanged();return}
+  if(key==='⌫'){
+    pushUndo();
+    const start=expr.selectionStart??expr.value.length;
+    const end=expr.selectionEnd??expr.value.length;
+    if(start!==end) expr.value=expr.value.slice(0,start)+expr.value.slice(end);
+    else if(start>0) expr.value=expr.value.slice(0,start-1)+expr.value.slice(start);
+    expressionChanged();
+    return;
+  }
+  if(key==='='){calculate();return}
+
+  pushUndo();
+  const start=expr.selectionStart??expr.value.length;
+  const end=expr.selectionEnd??expr.value.length;
+  expr.value=expr.value.slice(0,start)+key+expr.value.slice(end);
+  expressionChanged();
+
+  // Deliberately do NOT call expr.focus() here.
+  // The keypad remains usable without opening the phone keyboard.
+}
+
+function moveCursor(delta){
+  const p=expr.selectionStart??expr.value.length;
+  const next=Math.max(0,Math.min(expr.value.length,p+delta));
+  expr.setSelectionRange(next,next);
+}
+
+function tokenize(src){
+  const tokens=[];
+  let i=0;
+  while(i<src.length){
+    const c=src[i];
+    if(/\s/.test(c)){i++;continue}
+    if(/[0-9.]/.test(c)){
+      let j=i;
+      while(j<src.length && /[0-9.]/.test(src[j])) j++;
+      const n=Number(src.slice(i,j));
+      if(!Number.isFinite(n)) throw Error('Bad number');
+      tokens.push({type:'number',value:n});i=j;continue;
+    }
+    if(/[A-Za-zα-ωΑ-ΩΔ]/u.test(c)){
+      let j=i+1;
+      while(j<src.length && /[A-Za-zα-ωΑ-ΩΔ]/u.test(src[j])) j++;
+      tokens.push({type:'name',value:src.slice(i,j)});i=j;continue;
+    }
+    if(c==='π'){tokens.push({type:'name',value:'π'});i++;continue}
+    if('+-−×÷*/^%(),!|'.includes(c)){tokens.push({type:'op',value:c});i++;continue}
+    if(c==='°'){tokens.push({type:'degree',value:c});i++;continue}
+    throw Error('Unsupported symbol: '+c);
+  }
+  return tokens;
+}
+
+function evaluate(src){
+  let t=tokenize(src);
+  const names=new Set(['sin','cos','tan','asin','acos','atan','cot','sqrt','cbrt','log','ln','abs','floor','ceil','round','exp']);
+  const values={π:Math.PI,e:Math.E};
+
+  // Insert implicit multiplication: 2π, 2(3), (2)(3), 2sin(30), etc.
+  const out=[];
+  const canEnd=a=>a && (a.type==='number'||a.type==='name'||a.value===')'||a.value==='!');
+  const canStart=b=>b && (b.type==='number'||b.type==='name'||b.value==='(');
+  for(let i=0;i<t.length;i++){
+    const a=t[i],b=t[i+1];
+    out.push(a);
+    if(canEnd(a)&&canStart(b) && !(a.type==='name'&&b.value==='('&&names.has(a.value))){
+      out.push({type:'op',value:'*'});
+    }
+  }
+  t=out;
+  let p=0;
+
+  function peek(){return t[p]}
+  function eat(v){if(peek()?.value===v){p++;return true}return false}
+  function expect(v){if(!eat(v))throw Error('Expected '+v)}
+
+  function primary(){
+    const x=peek();
+    if(!x) throw Error('Expected value');
+    if(x.type==='number'){p++;return x.value}
+    if(x.type==='name'){
+      p++;
+      if(peek()?.value==='('){
+        p++;
+        const arg=expression();
+        expect(')');
+        return call(x.value,arg);
+      }
+      if(Object.prototype.hasOwnProperty.call(values,x.value)) return values[x.value];
+      if(x.value==='x'||x.value==='y'||x.value==='z'||x.value==='α'||x.value==='β'||x.value==='θ') {
+        throw Error('Variable needs a value');
+      }
+      throw Error('Unknown name: '+x.value);
+    }
+    if(eat('(')){const v=expression();expect(')');return v}
+    throw Error('Expected value');
+  }
+
+  function call(name,x){
+    const trig={sin:Math.sin,cos:Math.cos,tan:Math.tan,cot:v=>1/Math.tan(v),
+      asin:Math.asin,acos:Math.acos,atan:Math.atan};
+    if(name in trig){
+      if(['sin','cos','tan','cot'].includes(name)){
+        const r=angleMode==='DEG'?x*Math.PI/180:x;
+        return trig[name](r);
+      }
+      const r=trig[name](x);
+      return angleMode==='DEG'?r*180/Math.PI:r;
+    }
+    if(name==='sqrt') return Math.sqrt(x);
+    if(name==='cbrt') return Math.cbrt(x);
+    if(name==='log') return Math.log10(x);
+    if(name==='ln') return Math.log(x);
+    if(name==='abs') return Math.abs(x);
+    if(name==='floor') return Math.floor(x);
+    if(name==='ceil') return Math.ceil(x);
+    if(name==='round') return Math.round(x);
+    if(name==='exp') return Math.exp(x);
+    throw Error('Unknown function');
+  }
+
+  function postfix(){
+    let v=primary();
+    while(true){
+      if(eat('!')){v=factorial(v);continue}
+      if(eat('%')){v/=100;continue}
+      if(peek()?.type==='degree'){p++;continue}
+      break;
+    }
+    return v;
+  }
+
+  function unary(){
+    if(eat('+'))return unary();
+    if(eat('-')||eat('−'))return -unary();
+    return postfix();
+  }
+
+  function power(){
+    let a=unary();
+    if(eat('^')){const b=power();a=Math.pow(a,b)}
+    return a;
+  }
+
+  function term(){
+    let v=power();
+    while(peek() && ['*','×','/','÷'].includes(peek().value)){
+      const op=peek().value;p++;
+      const b=power();
+      if(op==='*'||op==='×')v*=b;else v/=b;
+    }
+    return v;
+  }
+
+  function expression(){
+    let v=term();
+    while(peek() && ['+','-','−'].includes(peek().value)){
+      const op=peek().value;p++;
+      const b=term();
+      v+=op==='+'?b:-b;
+    }
+    return v;
+  }
+
+  const result=expression();
+  if(p!==t.length)throw Error('Unexpected input');
+  return result;
+}
+
+function factorial(n){
+  if(!Number.isFinite(n)||n<0||Math.floor(n)!==n||n>170)throw Error('Invalid factorial');
+  let r=1;for(let i=2;i<=n;i++)r*=i;return r;
+}
+
+function format(n){
+  if(Number.isNaN(n))return 'NaN';
+  if(!Number.isFinite(n))return n>0?'∞':'−∞';
+  if(Math.abs(n)<1e-12)n=0;
+  return Number(n.toPrecision(12)).toString();
+}
+
+function calculate(){
+  const q=expr.value.trim();
+  if(!q){reaction.textContent='Enter an expression first.';return}
+  // One calculation per distinct expression. Pressing equals again does nothing.
+  if(q===lastSubmittedExpression)return;
+  lastSubmittedExpression=q;
+  try{
+    const n=evaluate(q);
+    if(n<30){
+      reaction.textContent=chooseSimpleRoast();
+      answer.textContent='Too easy. 😭';
+      return;
+    }
+    const difficulty=getDifficulty(q);
+    reaction.textContent=chooseReaction(difficulty);
+    const out=format(n);
+    answer.textContent=out;
+    history.unshift({q,a:out,t:new Date().toLocaleString()});
+    history=history.slice(0,30);
+    localStorage.setItem('ultimateCalculatorHistory',JSON.stringify(history));
+    renderHistory();
+  }catch(err){
+    answer.textContent='—';
+    reaction.textContent='I couldn’t solve that expression. Look at the expression and check the symbols, brackets, and values, then try again.';
+  }
+}
+
+function renderHistory(){
+  historyEl.innerHTML='';
+  if(!history.length){
+    historyEl.innerHTML='<div class="subtle">No calculations yet.</div>';
+    return;
+  }
+  history.forEach((item,index)=>{
+    const card=document.createElement('div');card.className='hist';
+    const q=document.createElement('div');q.className='hist-q';q.textContent=item.q;
+    const a=document.createElement('div');a.className='hist-a';a.textContent='= '+item.a;
+    const m=document.createElement('div');m.className='hist-meta';m.textContent=item.t;
+    const actions=document.createElement('div');actions.className='hist-actions';
+    ['Reuse','Copy','Delete'].forEach(label=>{
+      const b=document.createElement('button');b.textContent=label;actions.appendChild(b);
+      if(label==='Reuse')b.onclick=()=>{expr.value=item.q;expressionChanged();};
+      if(label==='Copy')b.onclick=()=>navigator.clipboard?.writeText(item.a);
+      if(label==='Delete')b.onclick=()=>{history.splice(index,1);localStorage.setItem('ultimateCalculatorHistory',JSON.stringify(history));renderHistory()};
+    });
+    card.append(q,a,m,actions);historyEl.appendChild(card);
+  });
+}
+
+document.querySelectorAll('[data-key]').forEach(button=>{
+  button.addEventListener('mousedown',e=>e.preventDefault());
+  button.addEventListener('click',()=>insertKey(button.dataset.key));
+});
+
+document.querySelectorAll('.tab[data-group]').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.tab[data-group]').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.group).classList.add('active');
+  });
+});
+
+document.getElementById('degBtn').onclick=()=>{
+  angleMode='DEG';document.getElementById('degBtn').classList.add('active');document.getElementById('radBtn').classList.remove('active');
+};
+document.getElementById('radBtn').onclick=()=>{
+  angleMode='RAD';document.getElementById('radBtn').classList.add('active');document.getElementById('degBtn').classList.remove('active');
+};
+
+document.getElementById('undo').onclick=()=>{
+  if(!undoStack.length)return;
+  redoStack.push(expr.value);expr.value=undoStack.pop();expressionChanged();
+};
+document.getElementById('redo').onclick=()=>{
+  if(!redoStack.length)return;
+  undoStack.push(expr.value);expr.value=redoStack.pop();expressionChanged();
+};
+document.getElementById('selectAll').onclick=()=>expr.select();
+document.getElementById('copyExpr').onclick=()=>navigator.clipboard?.writeText(expr.value);
+document.getElementById('paste').onclick=async()=>{
+  try{
+    const text=await navigator.clipboard.readText();
+    if(text){pushUndo();expr.value=text;expressionChanged()}
+  }catch{reaction.textContent='Paste permission was not available.'}
+};
+document.getElementById('copyAnswer').onclick=()=>navigator.clipboard?.writeText(answer.textContent);
+document.getElementById('clearHistory').onclick=()=>{
+  history=[];localStorage.removeItem('ultimateCalculatorHistory');renderHistory();
+};
+expr.addEventListener('input',expressionChanged);
+expr.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){e.preventDefault();calculate()}
+  if(e.key==='Escape'){e.preventDefault();expr.blur()}
+});
+renderHistory();
+</script>
+</body>
+</html>
